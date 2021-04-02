@@ -2,9 +2,10 @@ package main
 
 import "C"
 import (
-	"fmt"
 	"log"
 	"os"
+	//"regexp"
+	"strings"
 	"time"
 
 	tb "gopkg.in/tucnak/telebot.v2"
@@ -14,17 +15,24 @@ import (
 )
 
 func main() {
+	/*
+		ПЧ := [2]uint64{0, 1}
+		for пч := [-2:]; пч := []uint64{0, 1}[:]; пч[0] < пч[1]; ПЧ = append(ПЧ, пч[0]+пч[1]) {}
 
-	for n := [2]int64{0, 1}; n[0] <= 99999999999; n[1], n[0] = n[1]+n[0], n[1] {
-		fmt.Println(n[0], float64(n[0])/float64(n[1]))
-	}
-
+		, ПЧ[1], ПЧ[2]; ж, Ж = Ж, жЖ; ПЧ[2] = ПЧ[0] + ПЧ[1] len; ПЧ[ж] > ПЧ[преж]; ПЧ[ж] = ПЧ[ж-1] + ПЧ[преЖ] {
+			len(ПЧ)
+		}; ПЧ[i] > ПЧ[i-1]ПЧ[< [2]int64{0, 1}; n[0] <= 99999999999; n[1], n[0] = ПЧ[1]+ПЧ[0], n[1] {
+			ПЧ = append(ПЧ, )
+			fmt.Println(n[0], float64(n[0]) / float64(n[1]))
+		}
+	*/
 	// Register all audio-video formats and codecs
 	avformat.AvRegisterAll()
 
+	os.Environ()
 	settings := tb.Settings{
-		URL:    "https://olkhovoy.com:8081", //os.Getenv("TELEGRAM_BOT_API_URL"), // if field is empty it equals to "https://api.telegram.org".
-		Token:  os.Getenv("TELEGRAM_BOT_API_TOKEN"),
+		URL:    "https://olkhovoy.com:8081",
+		Token:  "17405045__:AAFwExdvmmghJpjJN8HKe9odRU8rwxr2E__",
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
 	}
 	if len(settings.Token) == 0 {
@@ -39,7 +47,7 @@ func main() {
 	}
 
 	bot.Handle("/привет", func(msg *tb.Message) {
-		bot.Send(msg.Sender, "Сам, Привет.")
+		bot.Send(msg.Sender, "сам привет")
 	})
 
 	bot.Handle("/video", func(msg *tb.Message) {
@@ -51,81 +59,86 @@ func main() {
 		}
 
 		// Get filename from message, compose url
-		videofile := msg.Payload; // "pik_183_2021-03-28_00-05-49.ts.mp4"
+		//str := msg.Payload // "pik_183_2021-03-28_00-05-49.ts.mp4"
 
 		//videoRE := regexp.MustCompile("(?<videofilename>(?<videoname>pik_(?<cam>\\d\\d\\d)_(?<videodatetime>(?<videodate>\\d\\d\\d\\d-\\d\\d-\\d\\d)_(?<videotime>\\d\\d-\\d\\d-\\d\\d))[\\._]?(?<videosuffix>.*))\\.(?<videoformat>.*?))$")
 		//m := videoRE.FindSubmatch([]byte(videofile))
 		//text := fmt.Sprintf("%v", m)
-		filename := "/home/ao/V/MP4/" + videofile
-        fileurl := "https://olkhovoy.com/MP4/" + videofile
+		vid := msg.Payload
+		web := bool(strings.Compare(vid[:4], "http") == 0) || bool(strings.Compare(vid[:4], "file") == 0)
 
-		//re2, err := regexp.Compile("^pik_(\d\d\d)_((\d\d\d\d-\d\d-\d\d)_(\d\d-\d\d-\d\d)[\._]?(.*))\.(.*?))$")
+		if !web {
+			// Open video file
+			avctx := avformat.AvformatAllocContext()
+			err := avformat.AvformatOpenInput(&avctx, vid, nil, nil)
+			if err != 0 {
+				bot.Send(msg.Sender, "Could not open video: "+vid)
+				return
+			}
 
+			// Retrieve stream information
+			if avctx.AvformatFindStreamInfo(nil) < 0 {
+				bot.Send(msg.Sender, "Error: couldn't find stream information in the file: "+vid)
 
-		// Open video file
-		var d *avformat.Dictionary
-		avctx := avformat.AvformatAllocContext()
-		err := avformat.AvformatOpenInput(&avctx, fileurl, nil, &d)
-		if err != 0 {
-			bot.Send(msg.Sender, "Could not open video: " + fileurl)
-			return
-		}
+				// Close input file and free context
+				avctx.AvformatCloseInput()
+				return
+			}
 
-		// Retrieve stream information
-		if avctx.AvformatFindStreamInfo(&d) < 0 {
-			bot.Send(msg.Sender, "Error: couldn't find stream information in the file: " + filename)
-
-			// Close input file and free context
-			avctx.AvformatCloseInput()
-			return
-		}
-
-		// Select best stream (by number of pixels)
-		avstreams := avctx.Streams()
-		var beststream *avformat.Stream
-		if len(avstreams) > 0 {
-			var bestarea int
-			for _, stream := range avstreams {
-				codec := stream.Codec()
-				if codec != nil {
-					width, height := codec.GetWidth(), codec.GetHeight()
-					area := width * height
-					if area > bestarea { // compare stream resolutions [Width * Height]
-						bestarea = area
-						beststream = stream
+			// Select best stream (by number of pixels)
+			avstreams := avctx.Streams()
+			var beststream *avformat.Stream
+			if len(avstreams) > 0 {
+				var bestarea int
+				for _, stream := range avstreams {
+					codec := stream.Codec()
+					if codec != nil {
+						width, height := codec.GetWidth(), codec.GetHeight()
+						area := width * height
+						if area > bestarea { // compare stream resolutions [Width * Height]
+							bestarea = area
+							beststream = stream
+						}
 					}
 				}
 			}
-		}
-		if beststream == nil {
-			bot.Send(msg.Sender, "Error: could not find any video streams in the file: " + filename)
-			return
-		}
-		codec := beststream.Codec()
-		/*video := &tb.Video{
-			File:              tb.FromURL(fileurl),
-			MIME:              "video/mp4",
-			Width:             codec.GetWidth(),
-			Height:            codec.GetHeight(),
-			Caption:           filename,
-			FileName:          fileurl,
-			Duration:          int(beststream.NbFrames() * int64(beststream.AvgFrameRate().Den()) / int64(beststream.AvgFrameRate().Num())),
-			SupportsStreaming: true,
-		}
-		bot.Send(msg.Sender, video)*/
+			if beststream == nil {
+				bot.Send(msg.Sender, "Error: could not find any video streams in the file: "+vid)
+				return
+			}
+			var file tb.File
+			if web {
+				file = tb.FromURL(vid)
+			} else {
+				file = tb.FromDisk(vid)
+			}
+			codec := beststream.Codec()
+			video := &tb.Video{
+				File:              file,
+				MIME:              "video/mp4",
+				Width:             codec.GetWidth(),
+				Height:            codec.GetHeight(),
+				Caption:           vid,
+				FileName:          vid,
+				Duration:          int(beststream.NbFrames() * int64(beststream.AvgFrameRate().Den()) / int64(beststream.AvgFrameRate().Num())),
+				SupportsStreaming: true,
+			}
+			bot.Send(msg.Sender, video)
+		} else {
 
-		video1 := &tb.Video{
-			File:              tb.FromDisk(filename),
-			MIME:              "video/mp4",
-			Width:             codec.GetWidth(),
-			Height:            codec.GetHeight(),
-			Caption:           filename,
-			FileName:          filename,
-			Duration:          int(beststream.NbFrames() * int64(beststream.AvgFrameRate().Den()) / int64(beststream.AvgFrameRate().Num())),
-			SupportsStreaming: true,
-		}
-		bot.Send(msg.Sender, video1)
+			video1 := &tb.Video{
+				File:              tb.FromURL(vid),
+				MIME:              "video/mp4",
+				Width:             1280, //codec.GetWidth(),
+				Height:            720,  //codec.GetHeight(),
+				Caption:           vid,
+				FileName:          vid,
+				Duration:          118, //int(beststream.NbFrames() * int64(beststream.AvgFrameRate().Den()) / int64(beststream.AvgFrameRate().Num())),
+				SupportsStreaming: true,
+			}
+			bot.Send(msg.Sender, video1)
 
+		}
 		//vid.Caption = avctx.Metadata()
 		//vid.Duration = int(beststream.Duration() * int64(beststream.AvgFrameRate().Num()) / int64(beststream.AvgFrameRate().Den()))
 		//vid.Width = beststream.Codec().GetWidth()
