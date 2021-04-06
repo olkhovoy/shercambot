@@ -2,6 +2,7 @@ package main
 
 import "C"
 import (
+	"fmt"
 	"log"
 	"os"
 	//"regexp"
@@ -12,6 +13,7 @@ import (
 	//"github.com/giorgisio/goav/avcodec"
 	"github.com/giorgisio/goav/avformat"
 	//"github.com/giorgisio/goav/avutil"
+
 )
 
 func main() {
@@ -32,7 +34,7 @@ func main() {
 	os.Environ()
 	settings := tb.Settings{
 		URL:    "https://olkhovoy.com:8081",
-		Token:  "17405045__:AAFwExdvmmghJpjJN8HKe9odRU8rwxr2E__",
+		Token:  "1740504518:AAFwExdvmmghJpjJN8HKe9odRU8rwxr2Erw",
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
 	}
 	if len(settings.Token) == 0 {
@@ -50,8 +52,41 @@ func main() {
 		bot.Send(msg.Sender, "сам привет")
 	})
 
-	bot.Handle("/video", func(msg *tb.Message) {
+	bot.Handle("/file", func(msg *tb.Message) {
+		arg := msg.Payload
+		var fil tb.File
+		if (arg[:4] == "http") || (arg[:4] == "file") {
+			fil = tb.FromURL(arg)
+		} else {
+			fil = tb.FromDisk(arg)
+		}
+		pic := &tb.Photo{File: fil}
+		res, err := bot.Send(msg.Sender, pic)
+		var txt string
+		if err == nil {
+			txt = fmt.Sprintf("Ответ: %v", res)
+		} else {
+			txt = fmt.Sprintf("Ошиба: %v", err)
+		}
+		bot.Send(msg.Sender, txt)
+	})
 
+	bot.Handle("/video", func(msg *tb.Message) {
+		/*
+		fmt.Println(a.OnDisk()) // true
+		fmt.Println(a.InCloud()) // false
+
+		// Will upload the file from disk and send it to recipient
+		bot.Send(recipient, a)
+
+		// Next time you'll be sending this very *Audio, Telebot won't
+		// re-upload the same file but rather utilize its Telegram FileID
+		bot.Send(otherRecipient, a)
+
+		fmt.Println(a.OnDisk()) // true
+		fmt.Println(a.InCloud()) // true
+		fmt.Println(a.FileID) // <telegram file id: ABC-DEF1234ghIkl-zyx57W2v1u123ew11>
+		*/
 		// Get chat
 		if msg.Chat == nil {
 			bot.Send(msg.Sender, "Could not get target chat")
@@ -149,10 +184,64 @@ func main() {
 		//bot.Send(msg.Seznder, "Сам, Привет.")
 	})
 
+	bot.Handle(tb.OnPhoto, func(msg *tb.Message) {
+		obj := msg.Photo
+		info := fmt.Sprintf(
+			"FileID: %d, FileLocal: %s, FileURL: %s\n%v",
+			obj.FileID,
+			obj.FileLocal,
+			obj.FileURL,
+			obj,
+		)
+		bot.Send(
+			msg.Sender,
+			info,
+		)
+	})
+
 	bot.Handle(tb.OnVideo, func(msg *tb.Message) {
+		obj := msg.Video;
+		info := fmt.Sprintf(
+			"VideoFileID: %d, VideoLocal: %s, VideoURL: %s\n" +
+			"ThumbFileID: %d, ThumbLocal: %s, ThumbURL: %s\n%v",
+			obj.FileID,
+			obj.FileLocal,
+			obj.FileURL,
+			obj.Thumbnail.FileID,
+			obj.Thumbnail.FileLocal,
+			obj.Thumbnail.FileURL,
+			obj,
+		)
+		bot.Send(
+			msg.Sender,
+			info,
+		)
+	})
 
-		bot.Send(msg.Sender, msg.Video)
+	bot.Handle(tb.OnDocument, func(msg *tb.Message) {
+		obj := msg.Document
+		info := fmt.Sprintf(
+			"DocFileID: %v, DocLocal: %v, DocURL: %v\n" +
+			"ThumbFileID: %v, ThumbLocal: %v, ThumbURL: %v\n%v",
+			obj.File.FileID,
+			obj.File.FileLocal,
+			obj.File.FileURL,
+			obj.Thumbnail.FileID,
+			obj.Thumbnail.FileLocal,
+			obj.Thumbnail.FileURL,
+			obj,
+		)
+		bot.Send(
+			msg.Sender,
+			info,
+		)
+	})
 
+	bot.Handle(tb.OnAnimation, func(msg *tb.Message) {
+		bot.Send(
+			msg.Sender,
+			fmt.Sprint(msg.Animation),
+		)
 	})
 
 	bot.Start()
