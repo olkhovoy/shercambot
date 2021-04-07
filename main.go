@@ -13,7 +13,6 @@ import (
 	//"github.com/giorgisio/goav/avcodec"
 	"github.com/giorgisio/goav/avformat"
 	//"github.com/giorgisio/goav/avutil"
-
 )
 
 func main() {
@@ -48,11 +47,21 @@ func main() {
 		return
 	}
 
-	bot.Handle("/привет", func(msg *tb.Message) {
-		bot.Send(msg.Sender, "сам привет")
+	err = bot.SetCommands([]tb.Command{
+		{"/privet", "Проверка связи, бот должен ответить"},
+		{"/photo", "Отправить картинку"},
+		{"/video", "Послать видео (http:// или file://)"},
+	})
+	if err != nil {
+		log.Fatalf("could not create Telegram Bot instance: %v", err)
+		return
+	}
+
+	bot.Handle("/privet", func(msg *tb.Message) {
+		bot.Send(msg.Sender, "сам privet")
 	})
 
-	bot.Handle("/file", func(msg *tb.Message) {
+	bot.Handle("/photo", func(msg *tb.Message) {
 		arg := msg.Payload
 		var fil tb.File
 		if (arg[:4] == "http") || (arg[:4] == "file") {
@@ -73,19 +82,19 @@ func main() {
 
 	bot.Handle("/video", func(msg *tb.Message) {
 		/*
-		fmt.Println(a.OnDisk()) // true
-		fmt.Println(a.InCloud()) // false
+			fmt.Println(a.OnDisk()) // true
+			fmt.Println(a.InCloud()) // false
 
-		// Will upload the file from disk and send it to recipient
-		bot.Send(recipient, a)
+			// Will upload the file from disk and send it to recipient
+			bot.Send(recipient, a)
 
-		// Next time you'll be sending this very *Audio, Telebot won't
-		// re-upload the same file but rather utilize its Telegram FileID
-		bot.Send(otherRecipient, a)
+			// Next time you'll be sending this very *Audio, Telebot won't
+			// re-upload the same file but rather utilize its Telegram FileID
+			bot.Send(otherRecipient, a)
 
-		fmt.Println(a.OnDisk()) // true
-		fmt.Println(a.InCloud()) // true
-		fmt.Println(a.FileID) // <telegram file id: ABC-DEF1234ghIkl-zyx57W2v1u123ew11>
+			fmt.Println(a.OnDisk()) // true
+			fmt.Println(a.InCloud()) // true
+			fmt.Println(a.FileID) // <telegram file id: ABC-DEF1234ghIkl-zyx57W2v1u123ew11>
 		*/
 		// Get chat
 		if msg.Chat == nil {
@@ -187,7 +196,7 @@ func main() {
 	bot.Handle(tb.OnPhoto, func(msg *tb.Message) {
 		obj := msg.Photo
 		info := fmt.Sprintf(
-			"FileID: %d, FileLocal: %s, FileURL: %s\n%v",
+			"FileID: %d, FileLocal: %s, FileURL: %s\n\n%v",
 			obj.FileID,
 			obj.FileLocal,
 			obj.FileURL,
@@ -200,10 +209,9 @@ func main() {
 	})
 
 	bot.Handle(tb.OnVideo, func(msg *tb.Message) {
-		obj := msg.Video;
+		obj := msg.Video
 		info := fmt.Sprintf(
-			"VideoFileID: %d, VideoLocal: %s, VideoURL: %s\n" +
-			"ThumbFileID: %d, ThumbLocal: %s, ThumbURL: %s\n%v",
+			"VideoFileID: %d, VideoLocal: %s, VideoURL: %s,ThumbFileID: %d, ThumbLocal: %s, ThumbURL: %s\n%v",
 			obj.FileID,
 			obj.FileLocal,
 			obj.FileURL,
@@ -221,8 +229,7 @@ func main() {
 	bot.Handle(tb.OnDocument, func(msg *tb.Message) {
 		obj := msg.Document
 		info := fmt.Sprintf(
-			"DocFileID: %v, DocLocal: %v, DocURL: %v\n" +
-			"ThumbFileID: %v, ThumbLocal: %v, ThumbURL: %v\n%v",
+			"DocFileID: %v, DocLocal: %v, DocURL: %v, ThumbFileID: %v, ThumbLocal: %v, ThumbURL: %v\n\n%v",
 			obj.File.FileID,
 			obj.File.FileLocal,
 			obj.File.FileURL,
