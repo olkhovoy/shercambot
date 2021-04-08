@@ -1,4 +1,4 @@
 .idea/
 vendor/
 shercambot
-shercambot.token
+secret_token.go

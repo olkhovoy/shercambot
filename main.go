@@ -16,24 +16,14 @@ import (
 )
 
 func main() {
-	/*
-		ПЧ := [2]uint64{0, 1}
-		for пч := [-2:]; пч := []uint64{0, 1}[:]; пч[0] < пч[1]; ПЧ = append(ПЧ, пч[0]+пч[1]) {}
 
-		, ПЧ[1], ПЧ[2]; ж, Ж = Ж, жЖ; ПЧ[2] = ПЧ[0] + ПЧ[1] len; ПЧ[ж] > ПЧ[преж]; ПЧ[ж] = ПЧ[ж-1] + ПЧ[преЖ] {
-			len(ПЧ)
-		}; ПЧ[i] > ПЧ[i-1]ПЧ[< [2]int64{0, 1}; n[0] <= 99999999999; n[1], n[0] = ПЧ[1]+ПЧ[0], n[1] {
-			ПЧ = append(ПЧ, )
-			fmt.Println(n[0], float64(n[0]) / float64(n[1]))
-		}
-	*/
 	// Register all audio-video formats and codecs
 	avformat.AvRegisterAll()
 
 	os.Environ()
 	settings := tb.Settings{
 		URL:    "https://olkhovoy.com:8081",
-		Token:  "1740504518:AAFwExdvmmghJpjJN8HKe9odRU8rwxr2Erw",
+		Token:  apiToken,
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
 	}
 	if len(settings.Token) == 0 {
@@ -49,8 +39,8 @@ func main() {
 
 	err = bot.SetCommands([]tb.Command{
 		{"/privet", "Проверка связи, бот должен ответить"},
-		{"/photo", "Отправить картинку"},
-		{"/video", "Послать видео (http:// или file://)"},
+		{"/photo", "Отправить фото"},
+		{"/video", "Отправить видео (путь на диске сервера или URL: http:// или file://)"},
 	})
 	if err != nil {
 		log.Fatalf("could not create Telegram Bot instance: %v", err)
