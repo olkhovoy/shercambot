@@ -3,13 +3,12 @@ package main
 import "C"
 import (
 	"fmt"
+	tb "gopkg.in/tucnak/telebot.v2"
 	"log"
 	"os"
-	//"regexp"
+	"regexp"
 	"strings"
 	"time"
-
-	tb "gopkg.in/tucnak/telebot.v2"
 	//"github.com/giorgisio/goav/avcodec"
 	"github.com/giorgisio/goav/avformat"
 	//"github.com/giorgisio/goav/avutil"
@@ -17,12 +16,22 @@ import (
 
 func main() {
 
+	rootdir := os.Getenv("CAM_ROOT_DIR")
+	if len(rootdir) == 0 {
+		rootdir, _ = os.Getwd()
+		if len(rootdir) == 0 {
+			rootdir = "./"
+		}
+	}
+	cams := GetCams(rootdir)
+	log.Printf("Cameras root dir: %v", cams)
+
 	// Register all audio-video formats and codecs
 	avformat.AvRegisterAll()
 
 	os.Environ()
 	settings := tb.Settings{
-		URL:    "https://olkhovoy.com:8081",
+		URL:    "http://127.0.0.1:8081",
 		Token:  apiToken,
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
 	}
@@ -38,7 +47,7 @@ func main() {
 	}
 
 	err = bot.SetCommands([]tb.Command{
-		{"/privet", "Проверка связи, бот должен ответить"},
+		{"/privet", "Как и /привет - проверка связи, бот должен ответить"},
 		{"/photo", "Отправить фото"},
 		{"/video", "Отправить видео (путь на диске сервера или URL: http:// или file://)"},
 	})
@@ -49,6 +58,10 @@ func main() {
 
 	bot.Handle("/privet", func(msg *tb.Message) {
 		bot.Send(msg.Sender, "сам privet")
+	})
+
+	bot.Handle("/привет", func(msg *tb.Message) {
+		bot.Send(msg.Sender, "сам привет")
 	})
 
 	bot.Handle("/photo", func(msg *tb.Message) {
@@ -86,6 +99,7 @@ func main() {
 			fmt.Println(a.InCloud()) // true
 			fmt.Println(a.FileID) // <telegram file id: ABC-DEF1234ghIkl-zyx57W2v1u123ew11>
 		*/
+
 		// Get chat
 		if msg.Chat == nil {
 			bot.Send(msg.Sender, "Could not get target chat")
@@ -93,12 +107,27 @@ func main() {
 		}
 
 		// Get filename from message, compose url
+		vid := msg.Payload
+		if len(vid) == 0 {
+			bot.Send(msg.Sender, "Empty video filename")
+			return
+		}
+		//str := msg.Payload // "pik_183_2021-03-28_00-05-49.ts.mp4"
+		//vidre := regexp.MustCompile("(?<fullpath>(?<path>/?.*/|)(?<filename>(?<name>pik_(?<cam>\\d\\d\\d)_(?<datetime>(?<date>\\d\\d\\d\\d-\\d\\d-\\d\\d)_(?<time>\\d\\d-\\d\\d-\\d\\d))[\\._]?(?<videosuffix>.*))\\.(?<videoformat>.*?))")
+		vidre := regexp.MustCompile("(/?.*/|)(pik_(\\d\\d\\d)_\\d\\d\\d\\d-\\d\\d-\\d\\d_\\d\\d-\\d\\d-\\d\\d)\\.(.*?)")
+		m := vidre.FindAllStringSubmatchIndex(vid, -1)
+		if m == nil {
+			bot.Send(msg.Sender, "Could not parse filename from args")
+			return
+		}
+
 		//str := msg.Payload // "pik_183_2021-03-28_00-05-49.ts.mp4"
 
 		//videoRE := regexp.MustCompile("(?<videofilename>(?<videoname>pik_(?<cam>\\d\\d\\d)_(?<videodatetime>(?<videodate>\\d\\d\\d\\d-\\d\\d-\\d\\d)_(?<videotime>\\d\\d-\\d\\d-\\d\\d))[\\._]?(?<videosuffix>.*))\\.(?<videoformat>.*?))$")
 		//m := videoRE.FindSubmatch([]byte(videofile))
 		//text := fmt.Sprintf("%v", m)
-		vid := msg.Payload
+		//reg := regexp.MustCompile("((https?://.*?|file:.*?//|)(/.*?)(pik_\d\d\d_.*?)\.mp4),?\W*?)+")
+		//m := reg.FindAllStringSubmatchIndex(string(msg.Payload),1)
 		web := bool(strings.Compare(vid[:4], "http") == 0) || bool(strings.Compare(vid[:4], "file") == 0)
 
 		if !web {
